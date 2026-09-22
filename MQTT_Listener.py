@@ -1,6 +1,6 @@
 import paho.mqtt.client as mqtt
 
-BROKER = "10.120.36.61"   # replace with your Pi's IP address
+BROKER = "192.168.0.63"   # replace with your Pi's IP address
 PORT = 1883
 TOPIC = "kotilabra/chat"
 
