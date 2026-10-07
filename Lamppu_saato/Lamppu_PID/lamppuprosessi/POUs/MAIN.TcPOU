@@ -1,0 +1,38 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.21">
+  <POU Name="MAIN" Id="{8be68760-18f1-443a-b254-395aaca8b791}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM MAIN
+VAR
+	Controller      : PIcontroller;
+	Lamp_temp		: REAL;				// Lamp temperature in Celsius
+	Temp_setpoint	: REAL := 30;		// write values to change the setpoint
+	
+	PI_Kp			: REAL;				// Gain 
+	PI_Ki			: REAL;				// Integral
+	
+	fbMQTTPublisher : MQTTpublisher;
+	fbSubscriber	:MQTTsubscriber;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[// PI Controller
+Controller(		MeasuredValue := GVL.iPT100rawdata,
+				Setpoint 	  := Temp_setpoint,
+				Kp			  := PI_Kp,
+				Ki			  := PI_Ki,);
+
+				
+// Scales the data from the PT100 Sensor to Celsius.	
+Lamp_temp := INT_TO_REAL(GVL.iPT100rawdata) / 10.0;
+
+// Scales the PI controller 0-100 value to an analog 16 bit value 0-32767.
+GVL.iLampPower := REAL_TO_INT(Controller.ControlValue * 327.67);
+
+// Publishes the lamp temperature to MQTT once per second
+fbMQTTPublisher(fValue := Lamp_temp);
+
+// Receives setpoint, Kp and Ki over MQTT
+fbSubscriber(fSetpoint := Temp_setpoint, fKp := PI_Kp, fKi := PI_Ki);]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

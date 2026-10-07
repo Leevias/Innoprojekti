@@ -1,0 +1,10 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.13">
+  <GVL Name="GVL" Id="{b0d979c2-7530-47e2-88c5-85f4ef0befa3}">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+VAR_GLOBAL
+	iPT100rawdata AT %I* : INT;
+	iLampPower	AT %Q* : INT;
+END_VAR]]></Declaration>
+  </GVL>
+</TcPlcObject>

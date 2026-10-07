@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.pyc
+
+# Visual Studio / TwinCAT XAE
+.vs/
+*.suo
+*.user
+
+# TwinCAT build output (generated on every build)
+_Boot/
+_CompileInfo/
+_Libraries/
+_ModuleInstall/
+_Deployment/
+*.~u
+*.tpy
+*.tclrs
+*.compileinfo
+*.compiled-library
+*.bootinfo
+LineIDs.dbg
+*.bak

@@ -1,0 +1,60 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.21">
+  <POU Name="MQTTpublisher" Id="{bdbb0b70-00ad-4af3-9452-0ec42a2ea76c}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK MQTTpublisher
+VAR_INPUT
+	bEnable     : BOOL := TRUE;
+    sHostName   : STRING(255) := '192.168.0.100';   // The PC's IP on the PLC network
+    nHostPort   : UINT := 1883;
+    sClientId   : STRING(255) := 'CX7000-publisher';
+    sTopic      : STRING(255) := 'plc/pid/temp';
+    fValue      : REAL;                              // Value to publish
+    tInterval   : TIME := T#1S;                      // Publish interval
+END_VAR
+
+VAR_OUTPUT
+	 bConnected  : BOOL;
+    bError      : BOOL;
+    hrErrorCode : HRESULT;
+END_VAR
+
+VAR
+	fbMqttClient : FB_IotMqttClient;
+    fbTimer      : TON;
+    bInit        : BOOL := TRUE;
+    sPayload     : STRING(255);
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[// Set the connection parameters once
+IF bInit THEN
+    bInit := FALSE;
+    fbMqttClient.sHostName := sHostName;
+    fbMqttClient.nHostPort := nHostPort;
+    fbMqttClient.sClientId := sClientId;
+END_IF
+
+// Must be called every cycle: keeps the connection alive
+fbMqttClient.Execute(bEnable);
+
+bConnected  := fbMqttClient.bConnected;
+bError      := fbMqttClient.bError;
+hrErrorCode := fbMqttClient.hrErrorCode;
+
+// Publish once per interval while connected
+fbTimer(IN := bConnected AND NOT fbTimer.Q, PT := tInterval);
+
+IF fbTimer.Q THEN
+    sPayload := REAL_TO_STRING(fValue);
+    fbMqttClient.Publish(
+        sTopic       := sTopic,
+        pPayload     := ADR(sPayload),
+        nPayloadSize := INT_TO_UDINT(LEN(sPayload)),
+        eQoS         := TcIotMqttQos.AtMostOnceDelivery,
+        bRetain      := FALSE,
+        bQueue       := FALSE);
+END_IF
+]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

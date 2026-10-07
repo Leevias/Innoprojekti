@@ -1,0 +1,52 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.21">
+  <POU Name="PIcontroller" Id="{2b8c1296-bd46-424a-a079-4b514eddf58b}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK PIcontroller
+
+VAR_INPUT
+	MeasuredValue			: REAL;
+	SetPoint				: REAL;
+    Kp 						: REAL;          
+    Ki 						: REAL;	
+END_VAR
+
+VAR_OUTPUT
+	ControlValue			: REAL;
+END_VAR
+
+VAR
+	ProcessVariable 		: REAL;  			(* Current process value *)
+    TimeCycle 				: REAL:=0.01;       (* Cycle time in seconds *)
+    ControlOutput 			: REAL;          	(* PID controller output *)
+    Error 					: REAL;            	(* Difference between SetPoint and ProcessVariable *)
+    Integral 				: REAL;         	(* Integral accumulator *)
+    Derivative 				: REAL;       		(* Derivative term *)
+    PrevError 				: REAL;        		(* Error from the previous cycle *)
+	PrevSetPoint 			: REAL := 0.0;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[// PI CONTROLLER
+
+ProcessVariable:=MeasuredValue;
+ 
+IF SetPoint <> PrevSetPoint THEN // Integral value resets to zero everytime the setpoint is changed to avoid integral windup.
+    Integral := 0.0;
+    PrevSetPoint := SetPoint;
+END_IF
+
+Error := (SetPoint * 10) - ProcessVariable; // Error = How far away from the setpoint the temperature is.
+	
+    IF (ControlOutput = ControlValue) OR 		// Integral value won't change unless these conditions are met. This is to avoid windup.
+       (ControlOutput > 100.0 AND Error < 0.0) OR 
+       (ControlOutput < 0.0 AND Error > 0.0) THEN
+	   
+	   Integral := Integral + (Ki * Error * TimeCycle);
+	END_IF
+    
+ControlOutput := (Kp * Error) + (Ki * Integral); // PI controller math
+	
+ControlValue := LIMIT(0,ControlOutput,100);	// Limits the control to only go from 0 to 100]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>
