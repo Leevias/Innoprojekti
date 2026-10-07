@@ -1,0 +1,18 @@
+# systemd-palvelu, joka ajaa Django-kayttoliittymaa gunicornilla.
+# Kopioi: sudo cp pid_ui.service /etc/systemd/system/
+# Muuta User ja polut, jos repo on eri paikassa kuin /home/leevias/Innoprojekti.
+
+[Unit]
+Description=Lampun PI-saadon web-kayttoliittyma (Django)
+After=network.target mosquitto.service
+
+[Service]
+User=leevias
+WorkingDirectory=/home/leevias/Innoprojekti/web
+Environment=DJANGO_SECRET_KEY=vaihda-tama-pitkaksi-satunnaiseksi-merkkijonoksi
+# Vain yksi worker: jokaisella prosessilla on oma MQTT-yhteys ja tila.
+ExecStart=/home/leevias/Innoprojekti/web/venv/bin/gunicorn --workers 1 --threads 4 --bind 127.0.0.1:8000 pid_ui.wsgi:application
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

@@ -1,6 +1,8 @@
 # Python
 __pycache__/
 *.pyc
+venv/
+.venv/
 
 # Visual Studio / TwinCAT XAE
 .vs/

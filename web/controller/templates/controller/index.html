@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="fi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="csrf-token" content="{{ csrf_token }}">
+  <title>Lampun PI-säätö</title>
+  <style>
+    :root {
+      --bg: #f4f5f7;
+      --card: #ffffff;
+      --text: #1d2330;
+      --muted: #687083;
+      --border: #dde1e8;
+      --accent: #d9480f;
+      --ok: #2b8a3e;
+      --bad: #c92a2a;
+      --warn: #e67700;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #14171d;
+        --card: #1e222a;
+        --text: #e6e8ec;
+        --muted: #9aa1b0;
+        --border: #2f3541;
+        --accent: #ff8a4c;
+        --ok: #51cf66;
+        --bad: #ff6b6b;
+        --warn: #ffa94d;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    main { max-width: 720px; margin: 0 auto; padding: 24px 16px 48px; }
+    header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 20px; }
+    h1 { font-size: 1.4rem; margin: 0; }
+    h2 { font-size: 1rem; margin: 0 0 16px; color: var(--muted); font-weight: 600; }
+    .status { display: flex; gap: 8px; flex-wrap: wrap; }
+    .pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 4px 10px; border: 1px solid var(--border); border-radius: 999px;
+      background: var(--card); font-size: 0.85rem;
+    }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+    .dot.ok { background: var(--ok); }
+    .dot.bad { background: var(--bad); }
+    .card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+      padding: 20px; margin-bottom: 16px;
+    }
+    .temp { display: flex; align-items: baseline; gap: 6px; }
+    .temp-value { font-size: 4rem; font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; line-height: 1; }
+    .temp-unit { font-size: 1.6rem; color: var(--muted); }
+    .temp-meta { margin-top: 10px; color: var(--muted); font-size: 0.9rem; }
+    .row {
+      display: grid; grid-template-columns: 1fr auto; gap: 8px 12px; align-items: center;
+      padding: 12px 0; border-top: 1px solid var(--border);
+    }
+    .row:first-of-type { border-top: none; padding-top: 0; }
+    .row label { font-weight: 600; }
+    .row .current { color: var(--muted); font-size: 0.85rem; font-weight: 400; display: block; margin-top: 2px; }
+    .row form { display: flex; gap: 8px; }
+    input[type=number] {
+      width: 110px; padding: 8px 10px; font-size: 1rem;
+      border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text);
+    }
+    button {
+      padding: 8px 14px; font-size: 1rem; font-weight: 600; cursor: pointer;
+      border: none; border-radius: 8px; background: var(--accent); color: #fff;
+    }
+    button:disabled { opacity: 0.5; cursor: default; }
+    #message { min-height: 1.4em; font-size: 0.9rem; margin-top: 8px; }
+    #message.ok { color: var(--ok); }
+    #message.bad { color: var(--bad); }
+    @media (max-width: 480px) {
+      .row { grid-template-columns: 1fr; }
+      .temp-value { font-size: 3rem; }
+    }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Lampun PI-säätö</h1>
+    <div class="status">
+      <span class="pill"><span class="dot" id="mqtt-dot"></span><span id="mqtt-text">MQTT</span></span>
+      <span class="pill"><span class="dot" id="plc-dot"></span><span id="plc-text">PLC</span></span>
+    </div>
+  </header>
+
+  <section class="card">
+    <h2>Lämpötila</h2>
+    <div class="temp">
+      <span class="temp-value" id="temp">--</span>
+      <span class="temp-unit">°C</span>
+    </div>
+    <div class="temp-meta" id="temp-meta">Odotetaan dataa...</div>
+  </section>
+
+  <section class="card">
+    <h2>Säätimen asetukset</h2>
+    {% for p in params %}
+    <div class="row">
+      <label for="input-{{ p.key }}">
+        {{ p.label }}
+        <span class="current">Nykyinen: <span id="current-{{ p.key }}">--</span></span>
+      </label>
+      <form data-param="{{ p.key }}">
+        <input type="number" id="input-{{ p.key }}" step="any" min="{{ p.min }}" max="{{ p.max }}" required>
+        <button type="submit">Aseta</button>
+      </form>
+    </div>
+    {% endfor %}
+    <div id="message"></div>
+  </section>
+</main>
+
+<script>
+  const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+  const PARAMS = ["setpoint", "kp", "ki"];
+  const touched = new Set();  // Kentat joihin kayttaja on kirjoittanut: ei ylikirjoiteta
+
+  function fmt(value, digits) {
+    return value === null || value === undefined ? "--" : Number(value).toFixed(digits);
+  }
+
+  function setDot(id, ok) {
+    const dot = document.getElementById(id);
+    dot.classList.toggle("ok", ok);
+    dot.classList.toggle("bad", !ok);
+  }
+
+  function showMessage(text, ok) {
+    const el = document.getElementById("message");
+    el.textContent = text;
+    el.className = ok ? "ok" : "bad";
+  }
+
+  function render(state) {
+    setDot("mqtt-dot", state.connected);
+    document.getElementById("mqtt-text").textContent = state.connected ? "MQTT yhdistetty" : "MQTT ei yhteyttä";
+    setDot("plc-dot", state.plc_alive);
+    document.getElementById("plc-text").textContent = state.plc_alive ? "PLC lähettää" : "PLC ei vastaa";
+
+    document.getElementById("temp").textContent = fmt(state.temp, 1);
+    const meta = document.getElementById("temp-meta");
+    if (state.temp_age === null) {
+      meta.textContent = "Odotetaan dataa PLC:ltä...";
+    } else {
+      const sp = state.setpoint === null ? "" : ` · Asetusarvo ${fmt(state.setpoint, 1)} °C`;
+      meta.textContent = `Päivitetty ${state.temp_age.toFixed(0)} s sitten${sp}`;
+    }
+
+    for (const key of PARAMS) {
+      const value = state[key];
+      document.getElementById(`current-${key}`).textContent = value === null ? "--" : String(value);
+      const input = document.getElementById(`input-${key}`);
+      if (!touched.has(key) && document.activeElement !== input && value !== null) {
+        input.value = value;
+      }
+    }
+  }
+
+  async function poll() {
+    try {
+      const res = await fetch("api/state/", { cache: "no-store" });
+      render(await res.json());
+    } catch (err) {
+      setDot("mqtt-dot", false);
+      document.getElementById("mqtt-text").textContent = "Palvelin ei vastaa";
+    }
+  }
+
+  for (const form of document.querySelectorAll("form[data-param]")) {
+    const key = form.dataset.param;
+    const input = form.querySelector("input");
+    input.addEventListener("input", () => touched.add(key));
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const button = form.querySelector("button");
+      button.disabled = true;
+      try {
+        const res = await fetch("api/set/", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
+          body: JSON.stringify({ param: key, value: input.value }),
+        });
+        const data = await res.json();
+        if (res.ok) {
+          touched.delete(key);
+          render(data);
+          showMessage(`${key} = ${input.value} lähetetty PLC:lle.`, true);
+        } else {
+          showMessage(data.error || "Lähetys epäonnistui.", false);
+        }
+      } catch (err) {
+        showMessage("Palvelimeen ei saatu yhteyttä.", false);
+      } finally {
+        button.disabled = false;
+      }
+    });
+  }
+
+  poll();
+  setInterval(poll, 1000);
+</script>
+</body>
+</html>
