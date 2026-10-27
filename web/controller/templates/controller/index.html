@@ -15,7 +15,12 @@
       --accent: #d9480f;
       --ok: #2b8a3e;
       --bad: #c92a2a;
-      --warn: #e67700;
+      /* Kuvaajan sarjavarit (tarkistettu varisokeusturvallisiksi) */
+      --series-temp: #eb6834;
+      --series-sp: #2a78d6;
+      --grid: #e1e0d9;
+      --axis: #c3c2b7;
+      --axis-ink: #898781;
     }
     @media (prefers-color-scheme: dark) {
       :root {
@@ -27,7 +32,11 @@
         --accent: #ff8a4c;
         --ok: #51cf66;
         --bad: #ff6b6b;
-        --warn: #ffa94d;
+        --series-temp: #d95926;
+        --series-sp: #3987e5;
+        --grid: #2c2c2a;
+        --axis: #383835;
+        --axis-ink: #898781;
       }
     }
     * { box-sizing: border-box; }
@@ -37,8 +46,17 @@
       background: var(--bg);
       color: var(--text);
     }
-    main { max-width: 720px; margin: 0 auto; padding: 24px 16px 48px; }
-    header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 20px; }
+    main {
+      max-width: 1280px; margin: 0 auto; padding: 24px 16px 48px;
+      display: grid; grid-template-columns: minmax(300px, 380px) 1fr; gap: 16px;
+      align-items: start;
+    }
+    header {
+      grid-column: 1 / -1;
+      display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px;
+      margin-bottom: 4px;
+    }
+    .col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
     h1 { font-size: 1.4rem; margin: 0; }
     h2 { font-size: 1rem; margin: 0 0 16px; color: var(--muted); font-weight: 600; }
     .status { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -52,10 +70,14 @@
     .dot.bad { background: var(--bad); }
     .card {
       background: var(--card); border: 1px solid var(--border); border-radius: 12px;
-      padding: 20px; margin-bottom: 16px;
+      padding: 20px;
     }
+    .key { display: inline-block; width: 16px; height: 2px; vertical-align: 0.3em; margin-right: 6px; border-radius: 1px; }
+    .key-temp { background: var(--series-temp); }
+    .key-sp { background: repeating-linear-gradient(90deg, var(--series-sp) 0 5px, transparent 5px 8px); }
+    .key-fill { height: 10px; vertical-align: -1px; background: var(--series-temp); opacity: 0.25; border-radius: 2px; }
     .temp { display: flex; align-items: baseline; gap: 6px; }
-    .temp-value { font-size: 4rem; font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; line-height: 1; }
+    .temp-value { font-size: 4rem; font-weight: 700; line-height: 1; }
     .temp-unit { font-size: 1.6rem; color: var(--muted); }
     .temp-meta { margin-top: 10px; color: var(--muted); font-size: 0.9rem; }
     .row {
@@ -67,7 +89,7 @@
     .row .current { color: var(--muted); font-size: 0.85rem; font-weight: 400; display: block; margin-top: 2px; }
     .row form { display: flex; gap: 8px; }
     input[type=number] {
-      width: 110px; padding: 8px 10px; font-size: 1rem;
+      width: 100px; padding: 8px 10px; font-size: 1rem;
       border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text);
     }
     button {
@@ -78,9 +100,55 @@
     #message { min-height: 1.4em; font-size: 0.9rem; margin-top: 8px; }
     #message.ok { color: var(--ok); }
     #message.bad { color: var(--bad); }
+
+    /* --- Kuvaaja --- */
+    .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+    .toolbar span { color: var(--muted); font-size: 0.9rem; margin-right: 4px; }
+    .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: var(--card); }
+    .seg button {
+      background: transparent; color: var(--text); border-radius: 0; font-weight: 500;
+      font-size: 0.9rem; padding: 6px 12px; border-left: 1px solid var(--border);
+    }
+    .seg button:first-child { border-left: none; }
+    .seg button[aria-pressed="true"] { background: var(--text); color: var(--card); font-weight: 600; }
+    .chart-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 16px; margin-bottom: 8px; }
+    .chart-head h2 { margin: 0; }
+    .legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 0.85rem; color: var(--muted); }
+    .chart-box { position: relative; height: 340px; outline: none; }
+    .chart-box:focus-visible { box-shadow: 0 0 0 2px var(--series-sp); border-radius: 4px; }
+    .chart-box svg { display: block; width: 100%; height: 100%; }
+    .chart-box text { font-size: 11px; fill: var(--axis-ink); font-variant-numeric: tabular-nums; }
+    .chart-box text.end-label { font-size: 12px; fill: var(--text); font-weight: 600; }
+    .tooltip {
+      position: absolute; pointer-events: none; display: none; min-width: 150px;
+      background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+      padding: 8px 10px; font-size: 0.85rem; box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+    }
+    .tooltip .time { color: var(--muted); margin-bottom: 4px; font-variant-numeric: tabular-nums; }
+    .tooltip .tip-row { display: flex; align-items: center; gap: 2px; white-space: nowrap; }
+    .tooltip strong { font-variant-numeric: tabular-nums; margin-right: 6px; }
+    .tooltip .lbl { color: var(--muted); }
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
+    .stat .label { color: var(--muted); font-size: 0.8rem; }
+    .stat .value { font-size: 1.25rem; font-weight: 700; margin-top: 2px; }
+    .stat .sub { color: var(--muted); font-size: 0.8rem; }
+    details { margin-top: 12px; font-size: 0.9rem; }
+    summary { cursor: pointer; color: var(--muted); }
+    table { width: 100%; border-collapse: collapse; margin-top: 8px; font-variant-numeric: tabular-nums; }
+    th, td { text-align: right; padding: 4px 8px; border-bottom: 1px solid var(--border); }
+    th:first-child, td:first-child { text-align: left; }
+    th { color: var(--muted); font-weight: 600; }
+
+    @media (max-width: 960px) {
+      main { grid-template-columns: 1fr; }
+    }
     @media (max-width: 480px) {
       .row { grid-template-columns: 1fr; }
       .temp-value { font-size: 3rem; }
+      .chart-box { height: 260px; }
+    }
+    @media (max-width: 640px) {
+      .stats { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -94,31 +162,88 @@
     </div>
   </header>
 
-  <section class="card">
-    <h2>Lämpötila</h2>
-    <div class="temp">
-      <span class="temp-value" id="temp">--</span>
-      <span class="temp-unit">°C</span>
-    </div>
-    <div class="temp-meta" id="temp-meta">Odotetaan dataa...</div>
-  </section>
+  <!-- Vasen sarake: nykyiset arvot ja asetukset -->
+  <div class="col">
+    <section class="card">
+      <h2><span class="key key-temp"></span>Lämpötila</h2>
+      <div class="temp">
+        <span class="temp-value" id="temp">--</span>
+        <span class="temp-unit">°C</span>
+      </div>
+      <div class="temp-meta" id="temp-meta">Odotetaan dataa...</div>
+    </section>
 
-  <section class="card">
-    <h2>Säätimen asetukset</h2>
-    {% for p in params %}
-    <div class="row">
-      <label for="input-{{ p.key }}">
-        {{ p.label }}
-        <span class="current">Nykyinen: <span id="current-{{ p.key }}">--</span></span>
-      </label>
-      <form data-param="{{ p.key }}">
-        <input type="number" id="input-{{ p.key }}" step="any" min="{{ p.min }}" max="{{ p.max }}" required>
-        <button type="submit">Aseta</button>
-      </form>
+    <section class="card">
+      <h2>Säätimen asetukset</h2>
+      {% for p in params %}
+      <div class="row">
+        <label for="input-{{ p.key }}">
+          {{ p.label }}
+          <span class="current">Nykyinen: <span id="current-{{ p.key }}">--</span></span>
+        </label>
+        <form data-param="{{ p.key }}">
+          <input type="number" id="input-{{ p.key }}" step="any" min="{{ p.min }}" max="{{ p.max }}" required>
+          <button type="submit">Aseta</button>
+        </form>
+      </div>
+      {% endfor %}
+      <div id="message"></div>
+    </section>
+  </div>
+
+  <!-- Oikea sarake: lampotila-aika-kuvaaja -->
+  <div class="col">
+    <div class="toolbar">
+      <span>Aikaväli</span>
+      <div class="seg" id="window-buttons">
+        <button type="button" data-sec="60">1 min</button>
+        <button type="button" data-sec="300" aria-pressed="true">5 min</button>
+        <button type="button" data-sec="900">15 min</button>
+        <button type="button" data-sec="3600">60 min</button>
+      </div>
     </div>
-    {% endfor %}
-    <div id="message"></div>
-  </section>
+
+    <section class="card">
+      <div class="chart-head">
+        <h2>Lämpötila ja asetusarvo</h2>
+        <div class="legend">
+          <span><span class="key key-temp"></span>Lämpötila</span>
+          <span><span class="key key-sp"></span>Asetusarvo</span>
+          <span><span class="key key-fill"></span>Ylitys</span>
+        </div>
+      </div>
+      <div class="chart-box" id="chart" tabindex="0"
+           aria-label="Lämpötila ja asetusarvo ajan funktiona. Nuolinäppäimillä voi selata arvoja.">
+        <svg id="chart-svg"></svg>
+        <div class="tooltip" id="tooltip"></div>
+      </div>
+
+      <div class="stats">
+        <div class="stat">
+          <div class="label">Erotus nyt (asetusarvo − lämpötila)</div>
+          <div class="value" id="stat-error">--</div>
+        </div>
+        <div class="stat">
+          <div class="label">Suurin ylitys asetusarvon muutoksen jälkeen</div>
+          <div class="value" id="stat-overshoot">--</div>
+          <div class="sub" id="stat-overshoot-sub"></div>
+        </div>
+        <div class="stat">
+          <div class="label">Asetusarvo muuttui</div>
+          <div class="value" id="stat-change">--</div>
+          <div class="sub" id="stat-change-sub"></div>
+        </div>
+      </div>
+
+      <details id="table-view">
+        <summary>Näytä taulukkona</summary>
+        <table>
+          <thead><tr><th>Aika</th><th>Lämpötila (°C)</th><th>Asetusarvo (°C)</th></tr></thead>
+          <tbody id="table-body"></tbody>
+        </table>
+      </details>
+    </section>
+  </div>
 </main>
 
 <script>
@@ -126,8 +251,27 @@
   const PARAMS = ["setpoint", "kp", "ki"];
   const touched = new Set();  // Kentat joihin kayttaja on kirjoittanut: ei ylikirjoiteta
 
+  // --- Kuvaajan tila ---
+  const HISTORY_SEC = 3600;  // Sama kuin palvelimen HISTORY_MAX_POINTS (1 piste/s)
+  const GAP_SEC = 5;         // Pidempi tauko datassa katkaisee viivan
+  let history = [];          // [aika (s), lampotila, asetusarvo]
+  let lastT = 0;
+  let serverOffset = 0;      // palvelimen kello - selaimen kello (s)
+  let windowSec = 300;
+  let hoverT = null;         // Hiiren/nappaimiston valitsema aika
+
   function fmt(value, digits) {
     return value === null || value === undefined ? "--" : Number(value).toFixed(digits);
+  }
+
+  function serverNow() {
+    return Date.now() / 1000 + serverOffset;
+  }
+
+  function clock(t, withSeconds) {
+    const d = new Date(t * 1000);
+    const pad = (n) => String(n).padStart(2, "0");
+    return `${pad(d.getHours())}:${pad(d.getMinutes())}` + (withSeconds ? `:${pad(d.getSeconds())}` : "");
   }
 
   function setDot(id, ok) {
@@ -167,10 +311,322 @@
     }
   }
 
+  // ---------------------------------------------------------------------------
+  // Kuvaaja (SVG ilman ulkoisia kirjastoja, toimii myos ilman internetia)
+  // ---------------------------------------------------------------------------
+  const chartBox = document.getElementById("chart");
+  const svg = document.getElementById("chart-svg");
+  const tooltip = document.getElementById("tooltip");
+  const M = { top: 26, right: 92, bottom: 28, left: 44 };
+
+  function niceStep(range, count) {
+    const raw = range / count;
+    const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+    const n = raw / mag;
+    return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10) * mag;
+  }
+
+  function visiblePoints(t0) {
+    // Mukaan myos yksi piste ikkunan vasemman reunan takaa, jotta viiva alkaa reunasta.
+    let i = history.findIndex((p) => p[0] >= t0);
+    if (i === -1) return [];
+    if (i > 0) i -= 1;
+    return history.slice(i);
+  }
+
+  function nearestIndex(points, t) {
+    let lo = 0, hi = points.length - 1;
+    while (hi - lo > 1) {
+      const mid = (lo + hi) >> 1;
+      if (points[mid][0] < t) lo = mid; else hi = mid;
+    }
+    return Math.abs(points[lo][0] - t) <= Math.abs(points[hi][0] - t) ? lo : hi;
+  }
+
+  function drawChart() {
+    const W = chartBox.clientWidth;
+    const H = chartBox.clientHeight;
+    const pw = Math.max(10, W - M.left - M.right);
+    const ph = Math.max(10, H - M.top - M.bottom);
+    svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+
+    const now = serverNow();
+    const t0 = now - windowSec;
+    const pts = visiblePoints(t0);
+
+    if (pts.length === 0) {
+      svg.innerHTML = `<text x="${W / 2}" y="${H / 2}" text-anchor="middle">Odotetaan dataa PLC:ltä...</text>`;
+      tooltip.style.display = "none";
+      return;
+    }
+
+    // Y-akseli: lampotilat ja asetusarvot samalla asteikolla (°C)
+    const values = [];
+    for (const [, T, S] of pts) { values.push(T); if (S !== null) values.push(S); }
+    let lo = Math.min(...values), hi = Math.max(...values);
+    if (hi - lo < 2) { const c = (hi + lo) / 2; lo = c - 1; hi = c + 1; }
+    const yStep = niceStep(hi - lo, 5);
+    const yMin = Math.floor(lo / yStep) * yStep;
+    const yMax = Math.ceil(hi / yStep) * yStep;
+    const x = (t) => M.left + ((t - t0) / windowSec) * pw;
+    const y = (v) => M.top + (1 - (v - yMin) / (yMax - yMin)) * ph;
+
+    let out = `<defs><clipPath id="plot-clip"><rect x="${M.left}" y="${M.top - 2}" width="${pw}" height="${ph + 4}"/></clipPath></defs>`;
+
+    // Vaakaviivat ja y-arvot
+    const yDigits = yStep < 1 ? 1 : 0;
+    for (let v = yMin; v <= yMax + yStep / 2; v += yStep) {
+      const yy = y(v);
+      out += `<line x1="${M.left}" x2="${M.left + pw}" y1="${yy}" y2="${yy}" stroke="var(--grid)" stroke-width="1"/>`;
+      out += `<text x="${M.left - 8}" y="${yy + 4}" text-anchor="end">${v.toFixed(yDigits)}</text>`;
+    }
+    out += `<text x="${M.left - 8}" y="${M.top - 14}" text-anchor="end">°C</text>`;
+
+    // Aika-akseli
+    const tSteps = [5, 10, 15, 30, 60, 120, 300, 600, 900];
+    const tStep = tSteps.find((s) => windowSec / s <= 6) || 900;
+    for (let t = Math.ceil(t0 / tStep) * tStep; t <= now; t += tStep) {
+      out += `<text x="${x(t)}" y="${M.top + ph + 18}" text-anchor="middle">${clock(t, tStep < 60)}</text>`;
+    }
+    out += `<line x1="${M.left}" x2="${M.left + pw}" y1="${M.top + ph}" y2="${M.top + ph}" stroke="var(--axis)" stroke-width="1"/>`;
+
+    // Ylitys: alue jossa lampotila on asetusarvon ylapuolella
+    let fill = "";
+    for (const run of overshootRuns(pts)) {
+      fill += "M" + run.map((p) => `${x(p[0])},${y(p[1])}`).join("L");
+      fill += "L" + run.slice().reverse().map((p) => `${x(p[0])},${y(p[2])}`).join("L") + "Z";
+    }
+
+    // Asetusarvo porrasviivana, lampotila viivana. Tauko datassa katkaisee viivan.
+    let spPath = "", tempPath = "";
+    for (let i = 0; i < pts.length; i++) {
+      const [t, T, S] = pts[i];
+      const prev = pts[i - 1];
+      const gap = !prev || t - prev[0] > GAP_SEC;
+      tempPath += `${gap ? "M" : "L"}${x(t)},${y(T)}`;
+      if (S !== null) {
+        if (gap || prev[2] === null) spPath += `M${x(t)},${y(S)}`;
+        else spPath += `L${x(t)},${y(prev[2])}L${x(t)},${y(S)}`;
+      }
+    }
+
+    out += `<g clip-path="url(#plot-clip)">`;
+    if (fill) out += `<path d="${fill}" fill="var(--series-temp)" fill-opacity="0.18" stroke="none"/>`;
+    if (spPath) out += `<path d="${spPath}" fill="none" stroke="var(--series-sp)" stroke-width="2" stroke-dasharray="6 4" stroke-linejoin="round"/>`;
+    out += `<path d="${tempPath}" fill="none" stroke="var(--series-temp)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+    out += `</g>`;
+
+    // Suorat nimilaput viivojen oikeaan paahan (ei paallekkain)
+    const last = pts[pts.length - 1];
+    const labels = [{ y: y(last[1]), text: `${fmt(last[1], 1)} °C`, cls: "temp" }];
+    if (last[2] !== null) labels.push({ y: y(last[2]), text: `SP ${fmt(last[2], 1)}`, cls: "sp" });
+    if (labels.length === 2 && Math.abs(labels[0].y - labels[1].y) < 16) {
+      const [a, b] = labels[0].y <= labels[1].y ? labels : [labels[1], labels[0]];
+      const mid = (a.y + b.y) / 2;
+      a.y = mid - 8; b.y = mid + 8;
+    }
+    const lx = M.left + pw + 8;
+    for (const l of labels) {
+      const dash = l.cls === "sp" ? ` stroke-dasharray="3 2"` : "";
+      out += `<line x1="${lx}" x2="${lx + 12}" y1="${l.y}" y2="${l.y}" stroke="var(--series-${l.cls})" stroke-width="2"${dash}/>`;
+      out += `<text class="end-label" x="${lx + 16}" y="${l.y + 4}">${l.text}</text>`;
+    }
+
+    // Hover: pystyviiva ja merkit lahimpaan pisteeseen
+    let hover = null;
+    if (hoverT !== null) {
+      const idx = nearestIndex(pts, hoverT);
+      hover = pts[idx];
+      if (hover[0] < t0) hover = pts[Math.min(idx + 1, pts.length - 1)];
+      const hx = x(hover[0]);
+      out += `<line x1="${hx}" x2="${hx}" y1="${M.top}" y2="${M.top + ph}" stroke="var(--axis-ink)" stroke-width="1"/>`;
+      if (hover[2] !== null) out += `<circle cx="${hx}" cy="${y(hover[2])}" r="4" fill="var(--series-sp)" stroke="var(--card)" stroke-width="2"/>`;
+      out += `<circle cx="${hx}" cy="${y(hover[1])}" r="4" fill="var(--series-temp)" stroke="var(--card)" stroke-width="2"/>`;
+    }
+
+    out += `<rect id="hit" x="${M.left}" y="${M.top}" width="${pw}" height="${ph}" fill="transparent"/>`;
+    svg.innerHTML = out;
+
+    if (hover) showTooltip(hover, x(hover[0]), W); else tooltip.style.display = "none";
+  }
+
+  function overshootRuns(pts) {
+    // Jaksot joissa lampotila > asetusarvo. Reunoilla interpoloidaan leikkauskohta.
+    const runs = [];
+    let run = null;
+    const cross = (a, b) => {
+      const da = a[1] - a[2], db = b[1] - b[2];
+      const f = da / (da - db);
+      const t = a[0] + f * (b[0] - a[0]);
+      const v = a[2] + f * (b[2] - a[2]);
+      return [t, v, v];
+    };
+    for (let i = 0; i < pts.length; i++) {
+      const p = pts[i];
+      const prev = pts[i - 1];
+      const gap = !prev || p[0] - prev[0] > GAP_SEC;
+      const above = p[2] !== null && p[1] > p[2];
+      if (run && (gap || !above)) {
+        if (!gap && p[2] !== null) run.push(cross(prev, p));
+        runs.push(run);
+        run = null;
+      }
+      if (!run && above) {
+        run = [];
+        if (!gap && prev[2] !== null) run.push(cross(prev, p));
+        run.push(p);
+      } else if (run) {
+        run.push(p);
+      }
+    }
+    if (run) runs.push(run);
+    return runs;
+  }
+
+  function showTooltip(p, hx, W) {
+    tooltip.replaceChildren();
+    const time = document.createElement("div");
+    time.className = "time";
+    time.textContent = clock(p[0], true);
+    tooltip.append(time);
+    const rows = [["temp", `${fmt(p[1], 1)} °C`, "Lämpötila"]];
+    if (p[2] !== null) rows.push(["sp", `${fmt(p[2], 1)} °C`, "Asetusarvo"]);
+    for (const [cls, value, label] of rows) {
+      const row = document.createElement("div");
+      row.className = "tip-row";
+      const key = document.createElement("span");
+      key.className = `key key-${cls}`;
+      const strong = document.createElement("strong");
+      strong.textContent = value;
+      const lbl = document.createElement("span");
+      lbl.className = "lbl";
+      lbl.textContent = label;
+      row.append(key, strong, lbl);
+      tooltip.append(row);
+    }
+    tooltip.style.display = "block";
+    const tw = tooltip.offsetWidth;
+    const left = hx + 12 + tw > W ? hx - 12 - tw : hx + 12;
+    tooltip.style.left = `${Math.max(0, left)}px`;
+    tooltip.style.top = `${M.top + 4}px`;
+  }
+
+  chartBox.addEventListener("pointermove", (event) => {
+    const rect = chartBox.getBoundingClientRect();
+    const px = event.clientX - rect.left;
+    const pw = rect.width - M.left - M.right;
+    if (px < M.left || px > M.left + pw) { hoverT = null; drawChart(); return; }
+    hoverT = serverNow() - windowSec + ((px - M.left) / pw) * windowSec;
+    drawChart();
+  });
+  chartBox.addEventListener("pointerleave", () => { hoverT = null; drawChart(); });
+  chartBox.addEventListener("blur", () => { hoverT = null; drawChart(); });
+  chartBox.addEventListener("keydown", (event) => {
+    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight" && event.key !== "Escape") return;
+    event.preventDefault();
+    const pts = visiblePoints(serverNow() - windowSec);
+    if (event.key === "Escape" || pts.length === 0) { hoverT = null; drawChart(); return; }
+    let idx = hoverT === null ? pts.length - 1 : nearestIndex(pts, hoverT);
+    if (hoverT !== null) idx += event.key === "ArrowLeft" ? -1 : 1;
+    idx = Math.max(0, Math.min(pts.length - 1, idx));
+    hoverT = pts[idx][0];
+    drawChart();
+  });
+
+  for (const btn of document.querySelectorAll("#window-buttons button")) {
+    btn.addEventListener("click", () => {
+      windowSec = Number(btn.dataset.sec);
+      for (const b of document.querySelectorAll("#window-buttons button")) {
+        b.setAttribute("aria-pressed", String(b === btn));
+      }
+      drawChart();
+      renderTable();
+    });
+  }
+
+  new ResizeObserver(() => drawChart()).observe(chartBox);
+
+  // --- Tunnusluvut: erotus ja ylitys viimeisimman asetusarvon muutoksen jalkeen ---
+  function updateStats() {
+    const errEl = document.getElementById("stat-error");
+    const overEl = document.getElementById("stat-overshoot");
+    const overSub = document.getElementById("stat-overshoot-sub");
+    const changeEl = document.getElementById("stat-change");
+    const changeSub = document.getElementById("stat-change-sub");
+    const last = history[history.length - 1];
+    if (!last || last[2] === null) {
+      errEl.textContent = overEl.textContent = changeEl.textContent = "--";
+      overSub.textContent = changeSub.textContent = "";
+      return;
+    }
+    const err = last[2] - last[1];
+    errEl.textContent = `${err >= 0 ? "+" : "−"}${Math.abs(err).toFixed(1)} °C`;
+
+    // Etsi viimeisin asetusarvon muutos
+    let start = 0;
+    for (let i = history.length - 1; i > 0; i--) {
+      if (history[i][2] !== null && history[i - 1][2] !== null && history[i][2] !== history[i - 1][2]) {
+        start = i;
+        break;
+      }
+    }
+    const seg = history.slice(start).filter((p) => p[2] !== null);
+    const sp = last[2];
+    const startTemp = start > 0 ? history[start - 1][1] : seg[0][1];
+    const step = sp - startTemp;
+    // Nousevassa askeleessa ylitys on asetusarvon ylapuolella, laskevassa alapuolella.
+    const over = step >= 0
+      ? Math.max(0, Math.max(...seg.map((p) => p[1])) - sp)
+      : Math.max(0, sp - Math.min(...seg.map((p) => p[1])));
+    overEl.textContent = `${over.toFixed(1)} °C`;
+    overSub.textContent = Math.abs(step) >= 0.5
+      ? `${((over / Math.abs(step)) * 100).toFixed(0)} % askeleesta ${startTemp.toFixed(1)} → ${sp.toFixed(1)} °C`
+      : "";
+
+    if (start > 0) {
+      const ago = Math.round(serverNow() - history[start][0]);
+      changeEl.textContent = ago < 60 ? `${ago} s sitten` : `${Math.floor(ago / 60)} min ${ago % 60} s sitten`;
+      changeSub.textContent = `${history[start - 1][2].toFixed(1)} → ${history[start][2].toFixed(1)} °C`;
+    } else {
+      changeEl.textContent = "--";
+      changeSub.textContent = "Ei muutosta tallennetussa historiassa";
+    }
+  }
+
+  // --- Taulukkonakyma (viimeisimmat 30 pistetta valitulta aikavalilta) ---
+  const tableView = document.getElementById("table-view");
+  function renderTable() {
+    if (!tableView.open) return;
+    const body = document.getElementById("table-body");
+    const rows = visiblePoints(serverNow() - windowSec).slice(-30).reverse();
+    body.replaceChildren(...rows.map(([t, T, S]) => {
+      const tr = document.createElement("tr");
+      for (const text of [clock(t, true), fmt(T, 1), fmt(S, 1)]) {
+        const td = document.createElement("td");
+        td.textContent = text;
+        tr.append(td);
+      }
+      return tr;
+    }));
+  }
+  tableView.addEventListener("toggle", renderTable);
+
+  // --- Paivitys kerran sekunnissa ---
   async function poll() {
     try {
-      const res = await fetch("api/state/", { cache: "no-store" });
-      render(await res.json());
+      const res = await fetch(`api/state/?since=${lastT}`, { cache: "no-store" });
+      const state = await res.json();
+      serverOffset = state.server_time - Date.now() / 1000;
+      if (state.history && state.history.length) {
+        history.push(...state.history);
+        lastT = history[history.length - 1][0];
+        const cutoff = lastT - HISTORY_SEC;
+        if (history[0][0] < cutoff) history = history.filter((p) => p[0] >= cutoff);
+      }
+      render(state);
+      drawChart();
+      updateStats();
+      renderTable();
     } catch (err) {
       setDot("mqtt-dot", false);
       document.getElementById("mqtt-text").textContent = "Palvelin ei vastaa";

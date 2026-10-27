@@ -27,7 +27,13 @@ def index(request):
 
 @require_GET
 def api_state(request):
-    return JsonResponse(mqtt_client.get_state())
+    # ?since=<aika>: palautetaan myos kuvaajan historiapisteet taman ajan jalkeen.
+    since = request.GET.get("since")
+    try:
+        since = float(since) if since is not None else None
+    except ValueError:
+        return JsonResponse({"error": "Virheellinen since"}, status=400)
+    return JsonResponse(mqtt_client.get_state(since))
 
 
 @require_POST

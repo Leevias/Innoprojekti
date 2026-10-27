@@ -4,11 +4,10 @@ import logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 log = logging.getLogger("mqtt_relay")
 
-# TCP-rele PLC:n ja palvelimen valilla. Korvaa Mosquitto-sillan lapparilla:
+# TCP-rele PLC:n ja palvelimen valilla.
 # PLC (FB_IotMqttClient) yhdistaa taman koneen porttiin 1883, ja skripti
 # valittaa kaikki tavut sellaisenaan palvelimen Mosquittolle. PLC luulee
-# puhuvansa suoraan palvelimen brokerille. Ei vaadi admin-oikeuksia eika
-# ulkoisia kirjastoja.
+# puhuvansa suoraan palvelimen brokerille. 
 
 # --- PLC-puoli: kuunnellaan kaikilla verkkokorteilla ---
 LISTEN_HOST = "0.0.0.0"
@@ -52,7 +51,12 @@ async def handle_client(plc_reader, plc_writer):
 
 
 async def main():
-    server = await asyncio.start_server(handle_client, LISTEN_HOST, LISTEN_PORT)
+    try:
+        server = await asyncio.start_server(handle_client, LISTEN_HOST, LISTEN_PORT)
+    except OSError as e:
+        log.error("Porttia %s ei saatu kayttoon (%s). Onko Mosquitto tai toinen rele jo kaynnissa?",
+                  LISTEN_PORT, e)
+        return
     log.info("Rele kaynnissa: %s:%s -> %s:%s. Ctrl+C lopettaa.",
              LISTEN_HOST, LISTEN_PORT, SERVER_HOST, SERVER_PORT)
     async with server:

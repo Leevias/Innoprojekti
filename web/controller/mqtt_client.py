@@ -2,6 +2,7 @@ import logging
 import os
 import threading
 import time
+from collections import deque
 
 import paho.mqtt.client as mqtt
 from django.conf import settings
@@ -22,6 +23,10 @@ _state = {
     "kp": None,
     "ki": None,
 }
+
+# Kuvaajan historia: (aika, lampotila, asetusarvo) jokaisesta lampotilaviestista.
+# Pidetaan vain muistissa; tyhjenee kun palvelu kaynnistetaan uudelleen.
+_history = deque(maxlen=settings.HISTORY_MAX_POINTS)
 
 _TOPIC_TO_KEY = {
     settings.TOPIC_TEMP: "temp",
@@ -62,7 +67,9 @@ def _on_message(client, userdata, msg):
     with _lock:
         _state[key] = value
         if key == "temp":
-            _state["temp_time"] = time.time()
+            now = time.time()
+            _state["temp_time"] = now
+            _history.append((round(now, 2), value, _state["setpoint"]))
 
 
 def get_client():
@@ -81,13 +88,18 @@ def get_client():
         return _client
 
 
-def get_state():
+def get_state(since=None):
+    """Nykytila. Jos since on annettu, mukana myos sen jalkeen tulleet historiapisteet."""
     get_client()
+    now = time.time()
     with _lock:
         state = dict(_state)
+        if since is not None:
+            state["history"] = [p for p in _history if p[0] > since]
     temp_time = state.pop("temp_time")
-    state["temp_age"] = None if temp_time is None else round(time.time() - temp_time, 1)
+    state["temp_age"] = None if temp_time is None else round(now - temp_time, 1)
     state["plc_alive"] = state["temp_age"] is not None and state["temp_age"] < settings.TEMP_STALE_SECONDS
+    state["server_time"] = round(now, 2)
     return state
 
 

@@ -57,3 +57,6 @@ PARAM_LIMITS = {
 
 # Jos lampotilaa ei ole tullut tata kauemmin, PLC naytetaan "ei vastaa" -tilassa.
 TEMP_STALE_SECONDS = 5
+
+# Kuvaajan historia muistissa: 3600 pistetta = 1 tunti, kun PLC lahettaa kerran sekunnissa.
+HISTORY_MAX_POINTS = 3600
