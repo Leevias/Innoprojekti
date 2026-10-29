@@ -2,12 +2,12 @@ import asyncio
 import logging
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
-log = logging.getLogger("mqtt_relay")
+log = logging.getLogger("mqtt_link")
 
-# TCP-rele PLC:n ja palvelimen valilla.
+# TCP-linkki PLC:n ja palvelimen valilla.
 # PLC (FB_IotMqttClient) yhdistaa taman koneen porttiin 1883, ja skripti
-# valittaa kaikki tavut sellaisenaan palvelimen Mosquittolle. PLC luulee
-# puhuvansa suoraan palvelimen brokerille. 
+# välittää kaikki tavut sellaisenaan palvelimen Mosquittolle. PLC luulee
+# puhuvansa suoraan palvelimen mqtt brokerille. 
 
 # --- PLC-puoli: kuunnellaan kaikilla verkkokorteilla ---
 LISTEN_HOST = "0.0.0.0"
@@ -54,10 +54,10 @@ async def main():
     try:
         server = await asyncio.start_server(handle_client, LISTEN_HOST, LISTEN_PORT)
     except OSError as e:
-        log.error("Porttia %s ei saatu kayttoon (%s). Onko Mosquitto tai toinen rele jo kaynnissa?",
+        log.error("Porttia %s ei saatu kayttoon (%s). Onko Mosquitto tai toinen tämä ohjelma jo kaynnissa eri ikkunassa?",
                   LISTEN_PORT, e)
         return
-    log.info("Rele kaynnissa: %s:%s -> %s:%s. Ctrl+C lopettaa.",
+    log.info("MQTT linkitys kaynnissa: %s:%s -> %s:%s. Ctrl+C lopettaa.",
              LISTEN_HOST, LISTEN_PORT, SERVER_HOST, SERVER_PORT)
     async with server:
         await server.serve_forever()
